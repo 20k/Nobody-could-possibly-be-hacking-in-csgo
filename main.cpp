@@ -1,3 +1,5 @@
+///lots of dxgi code stolen from the https://github.com/FreeRDP/FreeRDP people
+
 #include <iostream>
 
 #include <InitGuid.h>
