@@ -17,199 +17,199 @@
 
 int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutputDuplication)
 {
-	HRESULT status;
-	UINT dTop = 1, i = 0;
-	DXGI_OUTPUT_DESC desc;
-	IDXGIOutput * pOutput;
-	IDXGIDevice* DxgiDevice = NULL;
-	IDXGIAdapter* DxgiAdapter = NULL;
-	IDXGIOutput* DxgiOutput = NULL;
-	IDXGIOutput1* DxgiOutput1 = NULL;
+    HRESULT status;
+    UINT dTop = 1, i = 0;
+    DXGI_OUTPUT_DESC desc;
+    IDXGIOutput * pOutput;
+    IDXGIDevice* DxgiDevice = NULL;
+    IDXGIAdapter* DxgiAdapter = NULL;
+    IDXGIOutput* DxgiOutput = NULL;
+    IDXGIOutput1* DxgiOutput1 = NULL;
 
-	status = gDevice->QueryInterface(IID_IDXGIDevice, (void**) &DxgiDevice);
+    status = gDevice->QueryInterface(IID_IDXGIDevice, (void**) &DxgiDevice);
 
-	if (FAILED(status))
-	{
-		printf("Failed to get QI for DXGI Device\n");
-		return 1;
-	}
+    if (FAILED(status))
+    {
+        printf("Failed to get QI for DXGI Device\n");
+        return 1;
+    }
 
-	status = DxgiDevice->GetParent(IID_IDXGIAdapter, (void**) &DxgiAdapter);
-	DxgiDevice->Release();
-	DxgiDevice = NULL;
+    status = DxgiDevice->GetParent(IID_IDXGIAdapter, (void**) &DxgiAdapter);
+    DxgiDevice->Release();
+    DxgiDevice = NULL;
 
-	if (FAILED(status))
-	{
-		printf("Failed to get parent DXGI Adapter\n");
-		return 1;
-	}
+    if (FAILED(status))
+    {
+        printf("Failed to get parent DXGI Adapter\n");
+        return 1;
+    }
 
-	ZeroMemory(&desc, sizeof(desc));
-	pOutput = NULL;
+    ZeroMemory(&desc, sizeof(desc));
+    pOutput = NULL;
 
-	while (DxgiAdapter->EnumOutputs(i, &pOutput) != DXGI_ERROR_NOT_FOUND)
-	{
-		DXGI_OUTPUT_DESC* pDesc = &desc;
+    while (DxgiAdapter->EnumOutputs(i, &pOutput) != DXGI_ERROR_NOT_FOUND)
+    {
+        DXGI_OUTPUT_DESC* pDesc = &desc;
 
-		status = pOutput->GetDesc(pDesc);
+        status = pOutput->GetDesc(pDesc);
 
-		if (FAILED(status))
-		{
-			printf("Failed to get description\n");
-			return 1;
-		}
+        if (FAILED(status))
+        {
+            printf("Failed to get description\n");
+            return 1;
+        }
 
-		printf("Output %d %s %d\n", i, pDesc->DeviceName, pDesc->AttachedToDesktop);
+        printf("Output %d %s %d\n", i, pDesc->DeviceName, pDesc->AttachedToDesktop);
 
-		if (pDesc->AttachedToDesktop)
+        if (pDesc->AttachedToDesktop)
         {
             printf("DTop %i\n", i);
 
             dTop = i;
         }
 
-		pOutput->Release();
-		++i;
-	}
+        pOutput->Release();
+        ++i;
+    }
 
-	//dTop = wfi->screenID;
-	dTop = 0; ///???
+    //dTop = wfi->screenID;
+    dTop = 0; ///???
 
-	status = DxgiAdapter->EnumOutputs(dTop, &DxgiOutput);
-	DxgiAdapter->Release();
-	DxgiAdapter = NULL;
+    status = DxgiAdapter->EnumOutputs(dTop, &DxgiOutput);
+    DxgiAdapter->Release();
+    DxgiAdapter = NULL;
 
-	if (FAILED(status))
-	{
-		printf("Failed to get output\n");
-		return 1;
-	}
+    if (FAILED(status))
+    {
+        printf("Failed to get output\n");
+        return 1;
+    }
 
-	status = DxgiOutput->QueryInterface(IID_IDXGIOutput1, (void**) &DxgiOutput1);
-	DxgiOutput->Release();
-	DxgiOutput = NULL;
+    status = DxgiOutput->QueryInterface(IID_IDXGIOutput1, (void**) &DxgiOutput1);
+    DxgiOutput->Release();
+    DxgiOutput = NULL;
 
-	if (FAILED(status))
-	{
-		printf("Failed to get IDXGIOutput1\n");
-		return 1;
-	}
+    if (FAILED(status))
+    {
+        printf("Failed to get IDXGIOutput1\n");
+        return 1;
+    }
 
-	status = DxgiOutput1->DuplicateOutput((IUnknown*)gDevice, pgOutputDuplication);
-	DxgiOutput1->Release();
-	DxgiOutput1 = NULL;
+    status = DxgiOutput1->DuplicateOutput((IUnknown*)gDevice, pgOutputDuplication);
+    DxgiOutput1->Release();
+    DxgiOutput1 = NULL;
 
-	if (FAILED(status))
-	{
-		if (status == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
-		{
-			printf("Too many cooks on the duplication api\n");
-			return 1;
-		}
+    if (FAILED(status))
+    {
+        if (status == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+        {
+            printf("Too many cooks on the duplication api\n");
+            return 1;
+        }
 
-		printf("Failed to get duplicate output with err %x\n", status);
-		return 1;
-	}
+        printf("Failed to get duplicate output with err %x\n", status);
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 ///timeout in ms
 int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcquiredDesktopImage, IDXGIOutputDuplication** pgOutputDuplication, IDXGIResource** pDesktopResource)
 {
-	HRESULT status = 0;
-	UINT i = 0;
-	UINT DataBufferSize = 0;
-	BYTE* DataBuffer = NULL;
-	IDXGIResource*& DesktopResource = *pDesktopResource;
+    HRESULT status = 0;
+    UINT i = 0;
+    UINT DataBufferSize = 0;
+    BYTE* DataBuffer = NULL;
+    IDXGIResource*& DesktopResource = *pDesktopResource;
 
-	IDXGIOutputDuplication*& gOutputDuplication = *pgOutputDuplication;
-	ID3D11Texture2D*& gAcquiredDesktopImage = *pgAcquiredDesktopImage;
+    IDXGIOutputDuplication*& gOutputDuplication = *pgOutputDuplication;
+    ID3D11Texture2D*& gAcquiredDesktopImage = *pgAcquiredDesktopImage;
 
-	DXGI_OUTDUPL_FRAME_INFO FrameInfo;
+    DXGI_OUTDUPL_FRAME_INFO FrameInfo;
 
-	if (gAcquiredDesktopImage)
-	{
-		gAcquiredDesktopImage->Release();
-		gAcquiredDesktopImage = NULL;
-	}
+    if (gAcquiredDesktopImage)
+    {
+        gAcquiredDesktopImage->Release();
+        gAcquiredDesktopImage = NULL;
+    }
 
-	status = gOutputDuplication->AcquireNextFrame(timeout, &FrameInfo, &DesktopResource);
+    status = gOutputDuplication->AcquireNextFrame(timeout, &FrameInfo, &DesktopResource);
 
-	if (status == DXGI_ERROR_WAIT_TIMEOUT)
-	{
-	    //printf("Timeout\n");
-		return 1;
-	}
+    if (status == DXGI_ERROR_WAIT_TIMEOUT)
+    {
+        //printf("Timeout\n");
+        return 1;
+    }
 
-	if (FAILED(status))
-	{
-		if (status == DXGI_ERROR_ACCESS_LOST)
-		{
-			//WLog_ERR(TAG, "Failed to acquire next frame with status=%#X", status);
-			//WLog_ERR(TAG, "Trying to reinitialize due to ACCESS LOST...");
+    if (FAILED(status))
+    {
+        if (status == DXGI_ERROR_ACCESS_LOST)
+        {
+            //WLog_ERR(TAG, "Failed to acquire next frame with status=%#X", status);
+            //WLog_ERR(TAG, "Trying to reinitialize due to ACCESS LOST...");
 
-			if (gAcquiredDesktopImage)
-			{
-				gAcquiredDesktopImage->Release();
+            if (gAcquiredDesktopImage)
+            {
+                gAcquiredDesktopImage->Release();
                 gAcquiredDesktopImage = NULL;
-			}
+            }
 
-			if (gOutputDuplication)
-			{
-				gOutputDuplication->Release();
-				gOutputDuplication = NULL;
-			}
+            if (gOutputDuplication)
+            {
+                gOutputDuplication->Release();
+                gOutputDuplication = NULL;
+            }
 
-			dxgi_getDuplication(gDevice, &gOutputDuplication);
+            dxgi_getDuplication(gDevice, &gOutputDuplication);
 
-			printf("Access lost, regrabbing\n");
+            printf("Access lost, regrabbing\n");
 
-			return 1;
-		}
-		else
-		{
+            return 1;
+        }
+        else
+        {
             printf("Failed to get next frame %x\n", status);
 
-			//WLog_ERR(TAG, "Failed to acquire next frame with status=%#X", status);
-			status = gOutputDuplication->ReleaseFrame();
+            //WLog_ERR(TAG, "Failed to acquire next frame with status=%#X", status);
+            status = gOutputDuplication->ReleaseFrame();
 
-			if (FAILED(status))
-			{
-				//WLog_ERR(TAG, "Failed to release frame with status=%d", status);
-				printf("Failed to release frame???\n");
-			}
+            if (FAILED(status))
+            {
+                //WLog_ERR(TAG, "Failed to release frame with status=%d", status);
+                printf("Failed to release frame???\n");
+            }
 
-			return 1;
-		}
-	}
+            return 1;
+        }
+    }
 
-	status = DesktopResource->QueryInterface(IID_ID3D11Texture2D, (void**) &gAcquiredDesktopImage);
-	DesktopResource->Release();
-	DesktopResource = NULL;
+    status = DesktopResource->QueryInterface(IID_ID3D11Texture2D, (void**) &gAcquiredDesktopImage);
+    DesktopResource->Release();
+    DesktopResource = NULL;
 
-	*pgAcquiredDesktopImage = gAcquiredDesktopImage;
+    *pgAcquiredDesktopImage = gAcquiredDesktopImage;
 
-	if (FAILED(status))
-	{
-	    printf("broken2\n");
+    if (FAILED(status))
+    {
+        printf("broken2\n");
         return 1;
-	}
+    }
 
-	//wfi->framesWaiting = FrameInfo.AccumulatedFrames;
+    //wfi->framesWaiting = FrameInfo.AccumulatedFrames;
 
-	if (FrameInfo.AccumulatedFrames == 0)
-	{
-		status = gOutputDuplication->ReleaseFrame();
+    if (FrameInfo.AccumulatedFrames == 0)
+    {
+        status = gOutputDuplication->ReleaseFrame();
 
-		if (FAILED(status))
-		{
-			//WLog_ERR(TAG, "Failed to release frame with status=%d", status);
-			printf("Failed to release outputduplication frame %d\n", status);
-		}
-	}
+        if (FAILED(status))
+        {
+            //WLog_ERR(TAG, "Failed to release frame with status=%d", status);
+            printf("Failed to release outputduplication frame %d\n", status);
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -320,9 +320,9 @@ vec2f get_lk_pix(float* block_pxl, float* block_pxl_old, vec2i pos, int block_si
 }
 
 int WINAPI WinMain(HINSTANCE hInstance,
-                   HINSTANCE hPrevInstance,
-                   LPSTR lpCmdLine,
-                   int nCmdShow)
+        HINSTANCE hPrevInstance,
+        LPSTR lpCmdLine,
+        int nCmdShow)
 {
     ID3D11Device* pdev = nullptr;
     ID3D11DeviceContext* context = nullptr;
