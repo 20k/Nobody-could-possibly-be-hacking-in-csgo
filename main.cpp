@@ -2,10 +2,9 @@
 
 #include <InitGuid.h>
 
+///some combination of these must be what I want
 #include <windows.h>
 #include <gdiplus.h>
-/*#include <d3d9.h>
-#include <D3dx9tex.h>*/
 #include <d3d11.h>
 #include <d3d11_1.h>
 #include <DXGI.h>
@@ -13,10 +12,9 @@
 #include <dxgitype.h>
 #include <DXGI1_2.h>
 #include <SFML/Graphics.hpp>
-//#include <vec/vec.hpp>
+#include <vec/vec.hpp>
 
 
-#if 1
 int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutputDuplication)
 {
 	HRESULT status;
@@ -32,8 +30,7 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 
 	if (FAILED(status))
 	{
-		//WLog_ERR(TAG, "Failed to get QI for DXGI Device");
-		printf("bum1\n");
+		printf("Failed to get QI for DXGI Device\n");
 		return 1;
 	}
 
@@ -43,8 +40,7 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 
 	if (FAILED(status))
 	{
-		//WLog_ERR(TAG, "Failed to get parent DXGI Adapter");
-		printf("bum2\n");
+		printf("Failed to get parent DXGI Adapter\n");
 		return 1;
 	}
 
@@ -59,12 +55,10 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 
 		if (FAILED(status))
 		{
-			//WLog_ERR(TAG, "Failed to get description");
-			printf("bum3\n");
+			printf("Failed to get description\n");
 			return 1;
 		}
 
-		//WLog_INFO(TAG, "Output %d: [%s] [%d]", i, pDesc->DeviceName, pDesc->AttachedToDesktop);
 		printf("Output %d %s %d\n", i, pDesc->DeviceName, pDesc->AttachedToDesktop);
 
 		if (pDesc->AttachedToDesktop)
@@ -79,7 +73,7 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 	}
 
 	//dTop = wfi->screenID;
-	//dTop = 0; ///???
+	dTop = 0; ///???
 
 	status = DxgiAdapter->EnumOutputs(dTop, &DxgiOutput);
 	DxgiAdapter->Release();
@@ -87,8 +81,7 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 
 	if (FAILED(status))
 	{
-		//WLog_ERR(TAG, "Failed to get output");
-		printf("bum4\n");
+		printf("Failed to get output\n");
 		return 1;
 	}
 
@@ -98,8 +91,7 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 
 	if (FAILED(status))
 	{
-		//WLog_ERR(TAG, "Failed to get IDXGIOutput1");
-		printf("bum5\n");
+		printf("Failed to get IDXGIOutput1\n");
 		return 1;
 	}
 
@@ -111,20 +103,16 @@ int dxgi_getDuplication(ID3D11Device* gDevice, IDXGIOutputDuplication** pgOutput
 	{
 		if (status == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
 		{
-			//WLog_ERR(TAG, "There is already the maximum number of applications using the Desktop Duplication API running, please close one of those applications and then try again."));
-			printf("bum6\n");
+			printf("Too many cooks on the duplication api\n");
 			return 1;
 		}
 
-		//WLog_ERR(TAG, "Failed to get duplicate output. Status = %#X", status);
-		printf("bum7\n");
+		printf("Failed to get duplicate output with err %x\n", status);
 		return 1;
 	}
 
 	return 0;
 }
-
-
 
 ///timeout in ms
 int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcquiredDesktopImage, IDXGIOutputDuplication** pgOutputDuplication, IDXGIResource** pDesktopResource)
@@ -138,11 +126,6 @@ int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcqu
 	IDXGIOutputDuplication*& gOutputDuplication = *pgOutputDuplication;
 	ID3D11Texture2D*& gAcquiredDesktopImage = *pgAcquiredDesktopImage;
 
-	/*if (wfi->framesWaiting > 0)
-	{
-		wf_dxgi_releasePixelData(wfi);
-	}*/
-
 	DXGI_OUTDUPL_FRAME_INFO FrameInfo;
 
 	if (gAcquiredDesktopImage)
@@ -155,7 +138,7 @@ int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcqu
 
 	if (status == DXGI_ERROR_WAIT_TIMEOUT)
 	{
-	    printf("broken5\n");
+	    //printf("Timeout\n");
 		return 1;
 	}
 
@@ -180,22 +163,22 @@ int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcqu
 
 			dxgi_getDuplication(gDevice, &gOutputDuplication);
 
-			printf("broken3\n");
+			printf("Access lost, regrabbing\n");
 
 			return 1;
 		}
 		else
 		{
+            printf("Failed to get next frame %x\n", status);
+
 			//WLog_ERR(TAG, "Failed to acquire next frame with status=%#X", status);
 			status = gOutputDuplication->ReleaseFrame();
 
 			if (FAILED(status))
 			{
 				//WLog_ERR(TAG, "Failed to release frame with status=%d", status);
-				printf("newbroken\n");
+				printf("Failed to release frame???\n");
 			}
-
-			printf("broken4\n");
 
 			return 1;
 		}
@@ -206,8 +189,6 @@ int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcqu
 	DesktopResource = NULL;
 
 	*pgAcquiredDesktopImage = gAcquiredDesktopImage;
-
-	//printf("%i\n", gAcquiredDesktopImage);
 
 	if (FAILED(status))
 	{
@@ -224,35 +205,127 @@ int dxgi_nextFrame(UINT timeout, ID3D11Device* gDevice, ID3D11Texture2D** pgAcqu
 		if (FAILED(status))
 		{
 			//WLog_ERR(TAG, "Failed to release frame with status=%d", status);
-			printf("broken\n");
+			printf("Failed to release outputduplication frame %d\n", status);
 		}
 	}
 
 	return 0;
 }
-#endif
 
-//typedef unsigned __int32 uint32_t;
+
+vec2f get_lk(float* block_pxl, float* block_pxl_old, vec2i pos, int block_size, int w)
+{
+    float m1 = 0, m2 = 0, m3 = 0, m4 = 0;
+
+    float y1 = 0.f, y2 = 0.f;
+
+    int x = pos.v[0];
+    int y = pos.v[1];
+
+    for(int jj=0; jj<block_size; jj++)
+    {
+        for(int ii=0; ii<block_size; ii++)
+        {
+            int xc = x*block_size + ii;
+
+            int yc = y*block_size + jj;
+
+            float ldx = block_pxl[(yc)*w + xc + 1] - block_pxl[(yc)*w + xc - 1];
+            float ldy = block_pxl[(yc + 1)*w + xc] - block_pxl[(yc - 1)*w + xc];
+
+            float ldt = block_pxl[(yc)*w + xc] - block_pxl_old[(yc)*w + xc];
+
+            m1 += ldx*ldx;
+            m2 += ldx*ldy;
+            m3 += ldx*ldy;
+            m4 += ldy*ldy;
+
+            y1 += ldx * ldt;
+            y2 += ldy * ldt;
+        }
+    }
+
+    y1 = -y1;
+    y2 = -y2;
+
+    float inv = 1.f / (m1 * m4 - m2 * m3);
+
+    if(m1 * m4 - m2 * m3 < 0.001f)
+        inv = 0.f;
+
+    float nm1, nm2, nm3, nm4;
+
+    nm1 = m4 * inv;
+    nm2 = -m2 * inv;
+    nm3 = -m3 * inv;
+    nm4 = m1 * inv;
+
+    float v1 = nm1 * y1 + nm2 * y2;
+    float v2 = nm3 * y1 + nm4 * y2;
+
+    return {v1, v2};
+}
+
+vec2f get_lk_pix(float* block_pxl, float* block_pxl_old, vec2i pos, int block_size, int w)
+{
+    float m1 = 0, m2 = 0, m3 = 0, m4 = 0;
+
+    float y1 = 0.f, y2 = 0.f;
+
+    int x = pos.v[0];
+    int y = pos.v[1];
+
+    for(int jj=0; jj<block_size; jj++)
+    {
+        for(int ii=0; ii<block_size; ii++)
+        {
+            int xc = x + ii;
+
+            int yc = y + jj;
+
+            float ldx = block_pxl[(yc)*w + xc + 1] - block_pxl[(yc)*w + xc - 1];
+            float ldy = block_pxl[(yc + 1)*w + xc] - block_pxl[(yc - 1)*w + xc];
+
+            float ldt = block_pxl[(yc)*w + xc] - block_pxl_old[(yc)*w + xc];
+
+            m1 += ldx*ldx;
+            m2 += ldx*ldy;
+            m3 += ldx*ldy;
+            m4 += ldy*ldy;
+
+            y1 += ldx * ldt;
+            y2 += ldy * ldt;
+        }
+    }
+
+    y1 = -y1;
+    y2 = -y2;
+
+    float inv = 1.f / (m1 * m4 - m2 * m3);
+
+    if(m1 * m4 - m2 * m3 < 0.001f)
+        inv = 0.f;
+
+    float nm1, nm2, nm3, nm4;
+
+    nm1 = m4 * inv;
+    nm2 = -m2 * inv;
+    nm3 = -m3 * inv;
+    nm4 = m1 * inv;
+
+    float v1 = nm1 * y1 + nm2 * y2;
+    float v2 = nm3 * y1 + nm4 * y2;
+
+    return {v1, v2};
+}
 
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine,
                    int nCmdShow)
-/*int WinMain(
-  _In_ HINSTANCE hInstance,
-  _In_ HINSTANCE hPrevInstance,
-  _In_ LPSTR     lpCmdLine,
-  _In_ int       nCmdShow
-)*/
 {
-    printf("hi\n");
-
     ID3D11Device* pdev = nullptr;
     ID3D11DeviceContext* context = nullptr;
-
-    //D3D_FEATURE_LEVEL LEV = D3D_FEATURE_LEVEL_11_1;
-
-    //int ndat[1000] = {0};
 
     D3D_FEATURE_LEVEL featureLevels[] =
     {
@@ -266,39 +339,26 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
     HRESULT r3 = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &pdev, nullptr, &context);
 
-    //ID3D11Debug* dbg = NULL;
-
-    /*pdev->QueryInterface(IID_ID3D11Debug, (void**) &dbg);
-
-    HRESULT r4 = dbg->ValidateContext(context);
-
-    printf("r4 %x\n", r4);*/
-
-
-    //D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_DEBUG, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &pdev, nullptr, &context);
-
-    //int ndat2[1000] = {0};
-
-    //ndat[999] = ndat2[999];
-
-    //printf("%i %i\n", ndat[998], ndat2[998]);
-
     printf("%x\n", r3);
 
+    int w = 1680;
+    int h = 1050;
 
-    /*D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = 1680;
-    desc.Height = 1050;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    D3D11_TEXTURE2D_DESC desc = {0};
+    desc.Width = w;
+    desc.Height = h;
+    desc.MipLevels = desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_STAGING;
-    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
-    desc.MiscFlags = 0;*/
+    desc.BindFlags = 0;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc.MiscFlags = 0;
 
+    ID3D11Texture2D *pTexture = nullptr;
+    HRESULT r2 = pdev->CreateTexture2D( &desc, nullptr, &pTexture );
 
+    printf("WHAT %x\n", r2);
 
     IDXGIOutputDuplication* dup = nullptr;
 
@@ -308,96 +368,145 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
     IDXGIResource* dres = NULL;
 
-    ///1 is timeout in ms
     dxgi_nextFrame(2, pdev, &gAcquiredDesktopImage, &dup, &dres);
     dxgi_nextFrame(2, pdev, &gAcquiredDesktopImage, &dup, &dres);
     dxgi_nextFrame(2, pdev, &gAcquiredDesktopImage, &dup, &dres);
 
-    int i = 0;
+    sf::Clock clk;
 
-    while(gAcquiredDesktopImage == nullptr)
+    const int block_size = 20;
+
+    int cw, ch;
+    cw = ceilf((float)w/block_size);
+    ch = ceilf((float)h/block_size);
+
+    float* block_pxl = new float[w*h]();
+    float* block_pxl_old = new float[w*h]();
+
+    while(1)
     {
-        sf::Clock clk;
+        int res = dxgi_nextFrame(0, pdev, &gAcquiredDesktopImage, &dup, &dres);
 
-        dxgi_nextFrame(2, pdev, &gAcquiredDesktopImage, &dup, &dres);
-
-        std::cout << clk.getElapsedTime().asMicroseconds() / 1000.f << std::endl;
-    }
-
-
-
-    D3D11_TEXTURE2D_DESC desc = {0};
-    desc.Width = 1680;
-    desc.Height = 1050;
-    desc.MipLevels = desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_STAGING;
-    desc.BindFlags = 0;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    desc.MiscFlags = 0;
-
-    /*D3D11_SUBRESOURCE_DATA *sSubData = new D3D11_SUBRESOURCE_DATA;
-    sSubData->pSysMem = new uint32_t[desc.Width*desc.Height]();
-    sSubData->SysMemPitch = desc.Width * sizeof(uint32_t);
-    sSubData->SysMemSlicePitch = 1;*/
-
-    ID3D11Texture2D *pTexture = nullptr;
-    HRESULT r2 = pdev->CreateTexture2D( &desc, nullptr, &pTexture );
-
-    printf("WHAT %x\n", r2);
-
-    /*
-    D3D11_TEXTURE2D_DESC desc;
-    desc.Width = 256;
-    desc.Height = 256;
-    desc.MipLevels = desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DYNAMIC;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    desc.MiscFlags = 0;
-    */
-
-    //ID3D11Texture2D* d3dres = nullptr;
-
-    //dres->QueryInterface(IID_ID3D11Texture2D, (void**)&d3dres);
-
-    context->CopyResource(pTexture, gAcquiredDesktopImage);//(ID3D11Texture2D*)d3dres);
-
-    gAcquiredDesktopImage->Release();
-    dup->ReleaseFrame();
-
-    D3D11_MAPPED_SUBRESOURCE mapped;
-
-    HRESULT res = context->Map(pTexture, 0, D3D11_MAP_READ, 0, &mapped);
-
-    printf("MAP %x\n", res);
-
-    uint32_t* dat = (uint32_t*)mapped.pData;
-
-    sf::Image img;
-    img.create(1680, 1050);
-
-    for(int y=0; y<1050; y++)
-    {
-        for(int x=0; x<1680; x++)
+        if(res == 0)
         {
-            //printf("%i %i\n", x, y);
+            std::cout << clk.getElapsedTime().asMicroseconds() / 1000.f << std::endl;
+            clk.restart();
 
-            uint32_t val = dat[y*mapped.RowPitch/4 + x];
+            context->CopyResource(pTexture, gAcquiredDesktopImage);
 
-            img.setPixel(x, y, sf::Color(val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF));
+            D3D11_MAPPED_SUBRESOURCE mapped;
 
-            //if(val != 0)
-            //    printf("%i\n", val);
+            HRESULT res = context->Map(pTexture, 0, D3D11_MAP_READ, 0, &mapped);
+
+            //printf("MAP %x\n", res);
+
+            uint32_t* dat = (uint32_t*)mapped.pData;
+
+            for(int y=0; y<h; y++)
+            {
+                for(int x=0; x<w; x++)
+                {
+                    uint32_t val = dat[y*mapped.RowPitch/4 + x];
+
+                    uint8_t r = (val >> 16) & 0xFF;
+                    uint8_t g = (val >> 8) & 0xFF;
+                    uint8_t b = (val >> 0) & 0xFF;
+
+                    ///eh fuckit
+                    float intensity = r * 0.3f + g * 0.3f + b * 0.3f;
+
+                    block_pxl[y*w + x] = intensity;
+                }
+            }
+
+            context->Unmap(pTexture, 0);
+
+            const float high_magnitude_threshold = 1.25f;
+
+            float mag_accum = 0.f;
+
+            float pixel_cx = w/2.f;
+            float pixel_cy = h/2.f;
+
+            int bnum = 0;
+
+            for(int y=1; y<ch-1; y++)
+            {
+                for(int x=1; x<cw-1; x++)
+                {
+                    ///lazy
+                    bnum++;
+
+                    vec2f dir = get_lk(block_pxl, block_pxl_old, {x, y}, block_size, w);
+
+                    float v1 = dir.v[0];
+                    float v2 = dir.v[1];
+
+                    float len = sqrtf(v1 * v1 + v2 * v2) * 10.f;
+
+                    len = std::min(len, 30.f);
+
+                    mag_accum += len;
+
+                    #ifdef MOTION
+                    vec2f ls = {x * (float)block_size, y * (float)block_size};
+
+                    vec2f fin = ls + dir.norm() * len;//dir.norm() * len + ls;
+
+                    if(x >= cbx - check_size && x <= cbx + check_size &&
+                       y >= cby - check_size && y <= cby + check_size)
+                    {
+                        SDL_SetRenderDrawColor( renderer, 0xFF, 0x00, 0x00, 0xFF );
+                    }
+                    else
+                        SDL_SetRenderDrawColor( renderer, 0x00, 0x00, 0xFF, 0xFF );
+
+                    ls = ls / (vec2f){w, h};
+                    ls = ls * (vec2f){winw, winh};
+
+                    fin = fin / (vec2f){w, h};
+                    fin = fin * (vec2f){winw, winh};
+
+                    SDL_RenderDrawLine(renderer, ls.v[0], ls.v[1], fin.v[0], fin.v[1]);
+                    #endif
+                }
+            }
+
+            #define DO_MOUSE
+            #ifdef DO_MOUSE
+
+            bool fire = false;
+
+            int trigger_block = 6;
+
+            vec2f dir = get_lk_pix(block_pxl, block_pxl_old, (vec2i){pixel_cx, pixel_cy} - trigger_block/2, trigger_block, w);
+
+            const float thresh = 0.15;
+
+            if(dir.length() > thresh)
+                fire = true;
+
+            mag_accum /= bnum;
+
+            if(mag_accum >= high_magnitude_threshold)
+            {
+                printf("high %f ", mag_accum);
+                fire = false;
+            }
+
+            if(fire)
+            {
+                printf("FIRE! %f ", dir.length());
+                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_MOVE, 0, 0, 0, GetMessageExtraInfo());
+
+                mouse_event(MOUSEEVENTF_LEFTUP | MOUSEEVENTF_MOVE, 0, 0, 0, GetMessageExtraInfo());
+            }
+
+            #endif
+
+            std::swap(block_pxl, block_pxl_old);
         }
     }
-
-    img.saveToFile("test.png");
-
-    //D3DX11SaveTextureToFile(context, gAcquiredDesktopImage, D3DX11_IFF_BMP, "Test.bmp");
 
     return 0;
 }
