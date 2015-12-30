@@ -479,6 +479,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
             int trigger_block = 6;
 
+            ///time domain incorrectly specificied due to sometimes varying framerate
+            ///doesn't seem to matter hugely, though might subtly affect reproducability across other computers at non 60fps framerates
             vec2f dir = get_lk_pix(block_pxl, block_pxl_old, (vec2i){pixel_cx, pixel_cy} - trigger_block/2, trigger_block, w);
 
             const float thresh = 0.15;
